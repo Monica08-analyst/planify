@@ -1,0 +1,347 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Reusable Hardened Helpers ---
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId && isValidId(userId);
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId && isValidId(userId);
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp;
+    }
+
+    // --- Entity Validation Blueprints ---
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['ownerId', 'displayName', 'email', 'provider', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['ownerId', 'displayName', 'email', 'provider', 'createdAt', 'updatedAt'])
+        && data.ownerId is string && data.ownerId == userId
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.provider in ['google', 'apple', 'guest']
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidUserSettings(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'theme', 'tierPreview', 'notificationsEnabled',
+          'defaultReminderLeadMinutes', 'calorieTarget', 'proteinTarget',
+          'carbsTarget', 'fatsTarget', 'waterTargetGlasses', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'theme', 'tierPreview', 'notificationsEnabled',
+          'adaptiveRemindersEnabled',
+          'defaultReminderLeadMinutes', 'quietHoursStart', 'quietHoursEnd',
+          'calorieTarget', 'proteinTarget', 'carbsTarget', 'fatsTarget',
+          'waterTargetGlasses', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.theme in ['light', 'dark', 'system']
+        && data.tierPreview in ['pro', 'free']
+        && data.notificationsEnabled is bool
+        && (!('adaptiveRemindersEnabled' in data) || data.adaptiveRemindersEnabled is bool)
+        && data.defaultReminderLeadMinutes is number && data.defaultReminderLeadMinutes >= 0 && data.defaultReminderLeadMinutes <= 10080
+        && (!('quietHoursStart' in data) || (data.quietHoursStart is string && data.quietHoursStart.size() <= 10))
+        && (!('quietHoursEnd' in data) || (data.quietHoursEnd is string && data.quietHoursEnd.size() <= 10))
+        && data.calorieTarget is number && data.calorieTarget >= 500 && data.calorieTarget <= 10000
+        && data.proteinTarget is number && data.proteinTarget >= 0 && data.proteinTarget <= 1000
+        && data.carbsTarget is number && data.carbsTarget >= 0 && data.carbsTarget <= 1500
+        && data.fatsTarget is number && data.fatsTarget >= 0 && data.fatsTarget <= 500
+        && data.waterTargetGlasses is number && data.waterTargetGlasses >= 1 && data.waterTargetGlasses <= 30
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidTask(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'notes', 'category', 'priority', 'orderIndex',
+          'completed', 'dueDate', 'dueTime', 'reminderOffsetMinutes', 'recurrence',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'title', 'notes', 'category', 'priority', 'orderIndex',
+          'completed', 'completedAt', 'dueDate', 'dueTime', 'reminderOffsetMinutes',
+          'recurrence', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.notes is string && data.notes.size() <= 1000
+        && data.category in ['work', 'wellness', 'personal', 'errands']
+        && data.priority in ['high', 'medium', 'low']
+        && data.orderIndex is number && data.orderIndex >= 0 && data.orderIndex <= 100000
+        && data.completed is bool
+        && (!('completedAt' in data) || (data.completedAt is string && data.completedAt.size() <= 40))
+        && data.dueDate is string && data.dueDate.size() == 10
+        && data.dueTime is string && data.dueTime.size() <= 10
+        && data.reminderOffsetMinutes is number && data.reminderOffsetMinutes >= 0 && data.reminderOffsetMinutes <= 10080
+        && data.recurrence in ['none', 'daily', 'weekdays', 'weekly', 'monthly']
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDietLog(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'date', 'entryType', 'mealSlot', 'title',
+          'calories', 'proteinGrams', 'carbsGrams', 'fatsGrams',
+          'durationMinutes', 'intensity', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'date', 'entryType', 'mealSlot', 'title',
+          'calories', 'proteinGrams', 'carbsGrams', 'fatsGrams',
+          'durationMinutes', 'waterGlasses', 'intensity', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.date is string && data.date.size() == 10
+        && data.entryType in ['meal', 'activity', 'hydration']
+        && data.mealSlot in ['breakfast', 'lunch', 'dinner', 'snack', 'movement', 'hydration']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.calories is number && data.calories >= 0 && data.calories <= 10000
+        && data.proteinGrams is number && data.proteinGrams >= 0 && data.proteinGrams <= 1000
+        && data.carbsGrams is number && data.carbsGrams >= 0 && data.carbsGrams <= 1500
+        && data.fatsGrams is number && data.fatsGrams >= 0 && data.fatsGrams <= 500
+        && data.durationMinutes is number && data.durationMinutes >= 0 && data.durationMinutes <= 1440
+        && (!('waterGlasses' in data) || (data.waterGlasses is number && data.waterGlasses >= 0 && data.waterGlasses <= 30))
+        && data.intensity in ['gentle', 'moderate', 'vigorous']
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidWorkoutPlan(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'goal', 'fitnessLevel', 'durationMinutes',
+          'equipment', 'rationale', 'exercises', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'title', 'goal', 'fitnessLevel', 'durationMinutes',
+          'equipment', 'rationale', 'exercises', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.goal is string && data.goal.size() >= 1 && data.goal.size() <= 120
+        && data.fitnessLevel in ['beginner', 'intermediate', 'advanced']
+        && data.durationMinutes is number && data.durationMinutes >= 5 && data.durationMinutes <= 240
+        && data.equipment is string && data.equipment.size() <= 120
+        && data.rationale is string && data.rationale.size() <= 1000
+        && data.exercises is list && data.exercises.size() >= 1 && data.exercises.size() <= 25
+        && data.exercises[0] is map
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidSpecialDay(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'personOrEvent', 'occasionType', 'date', 'repeatsYearly',
+          'reminderDaysBefore', 'customReminderTime', 'budget', 'giftIdeas',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'personOrEvent', 'occasionType', 'date', 'repeatsYearly',
+          'reminderDaysBefore', 'customReminderTime', 'budget', 'giftIdeas',
+          'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.personOrEvent is string && data.personOrEvent.size() >= 1 && data.personOrEvent.size() <= 160
+        && data.occasionType in ['birthday', 'anniversary', 'holiday', 'milestone']
+        && data.date is string && data.date.size() == 10
+        && data.repeatsYearly is bool
+        && data.reminderDaysBefore is number && data.reminderDaysBefore >= 0 && data.reminderDaysBefore <= 90
+        && data.customReminderTime is string && data.customReminderTime.size() <= 10
+        && data.budget is number && data.budget >= 0 && data.budget <= 100000
+        && data.giftIdeas is list && data.giftIdeas.size() <= 25
+        && (data.giftIdeas.size() == 0 || data.giftIdeas[0] is map)
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidHabitInsight(data, userId) {
+      return data.keys().hasAll([
+          'ownerId', 'title', 'patternObservation', 'suggestedAction',
+          'focusArea', 'adopted', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'ownerId', 'title', 'patternObservation', 'suggestedAction',
+          'focusArea', 'adopted', 'createdAt', 'updatedAt'
+        ])
+        && data.ownerId is string && data.ownerId == userId
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.patternObservation is string && data.patternObservation.size() >= 1 && data.patternObservation.size() <= 500
+        && data.suggestedAction is string && data.suggestedAction.size() >= 1 && data.suggestedAction.size() <= 500
+        && data.focusArea in ['productivity', 'nutrition', 'movement', 'recovery']
+        && data.adopted is bool
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    // --- Collection Match Blocks ---
+    match /users/{userId}/private/{docId} {
+      allow get: if isOwner(userId) && isValidId(docId) && existing().ownerId == request.auth.uid;
+      allow list: if false;
+      allow create: if isVerifiedOwner(userId) && isValidId(docId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(docId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'provider', 'updatedAt']);
+      allow delete: if isVerifiedOwner(userId) && isValidId(docId);
+    }
+
+    match /users/{userId}/settings/{docId} {
+      allow get: if isOwner(userId) && isValidId(docId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(docId)
+        && isValidUserSettings(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(docId)
+        && isValidUserSettings(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'theme', 'tierPreview', 'notificationsEnabled', 'adaptiveRemindersEnabled',
+          'defaultReminderLeadMinutes', 'quietHoursStart', 'quietHoursEnd',
+          'calorieTarget', 'proteinTarget', 'carbsTarget', 'fatsTarget',
+          'waterTargetGlasses', 'updatedAt'
+        ]);
+      allow delete: if isVerifiedOwner(userId) && isValidId(docId);
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow get: if isOwner(userId) && isValidId(taskId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(taskId)
+        && isValidTask(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(taskId)
+        && isValidTask(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'completedAt', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['orderIndex', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'notes', 'category', 'priority', 'orderIndex',
+            'completed', 'completedAt', 'dueDate', 'dueTime',
+            'reminderOffsetMinutes', 'recurrence', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerifiedOwner(userId) && isValidId(taskId);
+    }
+
+    match /users/{userId}/dietLogs/{logId} {
+      allow get: if isOwner(userId) && isValidId(logId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(logId)
+        && isValidDietLog(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(logId)
+        && isValidDietLog(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'date', 'entryType', 'mealSlot', 'title', 'calories',
+          'proteinGrams', 'carbsGrams', 'fatsGrams', 'durationMinutes',
+          'waterGlasses', 'intensity', 'updatedAt'
+        ]);
+      allow delete: if isVerifiedOwner(userId) && isValidId(logId);
+    }
+
+    match /users/{userId}/workoutPlans/{planId} {
+      allow get: if isOwner(userId) && isValidId(planId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(planId)
+        && isValidWorkoutPlan(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(planId)
+        && isValidWorkoutPlan(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['exercises', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'goal', 'fitnessLevel', 'durationMinutes', 'equipment',
+            'rationale', 'exercises', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerifiedOwner(userId) && isValidId(planId);
+    }
+
+    match /users/{userId}/specialDays/{dayId} {
+      allow get: if isOwner(userId) && isValidId(dayId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(dayId)
+        && isValidSpecialDay(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(dayId)
+        && isValidSpecialDay(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['giftIdeas', 'updatedAt']) ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'personOrEvent', 'occasionType', 'date', 'repeatsYearly',
+            'reminderDaysBefore', 'customReminderTime', 'budget', 'giftIdeas', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerifiedOwner(userId) && isValidId(dayId);
+    }
+
+    match /users/{userId}/habitInsights/{insightId} {
+      allow get: if isOwner(userId) && isValidId(insightId);
+      allow list: if isOwner(userId) && resource.data.ownerId == request.auth.uid;
+      allow create: if isVerifiedOwner(userId) && isValidId(insightId)
+        && isValidHabitInsight(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedOwner(userId) && isValidId(insightId)
+        && isValidHabitInsight(incoming(), userId)
+        && incoming().ownerId == existing().ownerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['adopted', 'updatedAt']);
+      allow delete: if isVerifiedOwner(userId) && isValidId(insightId);
+    }
+  }
+}

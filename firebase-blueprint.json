@@ -1,0 +1,478 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user identity record isolated under the user's private subcollection.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["google", "apple", "guest"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerId", "displayName", "email", "provider", "createdAt", "updatedAt"]
+    },
+    "UserSettings": {
+      "title": "UserSettings",
+      "description": "User preferences for theme, notifications, nutrition targets, and Pro tier preview.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "theme": {
+          "type": "string",
+          "enum": ["light", "dark", "system"]
+        },
+        "tierPreview": {
+          "type": "string",
+          "enum": ["pro", "free"]
+        },
+        "notificationsEnabled": {
+          "type": "boolean"
+        },
+        "adaptiveRemindersEnabled": {
+          "type": "boolean"
+        },
+        "defaultReminderLeadMinutes": {
+          "type": "number"
+        },
+        "quietHoursStart": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "quietHoursEnd": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "calorieTarget": {
+          "type": "number"
+        },
+        "proteinTarget": {
+          "type": "number"
+        },
+        "carbsTarget": {
+          "type": "number"
+        },
+        "fatsTarget": {
+          "type": "number"
+        },
+        "waterTargetGlasses": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "theme",
+        "tierPreview",
+        "notificationsEnabled",
+        "defaultReminderLeadMinutes",
+        "calorieTarget",
+        "proteinTarget",
+        "carbsTarget",
+        "fatsTarget",
+        "waterTargetGlasses",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlannerTask": {
+      "title": "PlannerTask",
+      "description": "Daily planner task with drag-and-drop order index, recurrence, and reminder settings.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "category": {
+          "type": "string",
+          "enum": ["work", "wellness", "personal", "errands"]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "orderIndex": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "completedAt": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "dueDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "dueTime": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "reminderOffsetMinutes": {
+          "type": "number"
+        },
+        "recurrence": {
+          "type": "string",
+          "enum": ["none", "daily", "weekdays", "weekly", "monthly"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "notes",
+        "category",
+        "priority",
+        "orderIndex",
+        "completed",
+        "dueDate",
+        "dueTime",
+        "reminderOffsetMinutes",
+        "recurrence",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DietActivityLog": {
+      "title": "DietActivityLog",
+      "description": "Meal, hydration, or physical activity entry logged for a specific calendar day.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "entryType": {
+          "type": "string",
+          "enum": ["meal", "activity", "hydration"]
+        },
+        "mealSlot": {
+          "type": "string",
+          "enum": ["breakfast", "lunch", "dinner", "snack", "movement", "hydration"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "calories": {
+          "type": "number"
+        },
+        "proteinGrams": {
+          "type": "number"
+        },
+        "carbsGrams": {
+          "type": "number"
+        },
+        "fatsGrams": {
+          "type": "number"
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "waterGlasses": {
+          "type": "number"
+        },
+        "intensity": {
+          "type": "string",
+          "enum": ["gentle", "moderate", "vigorous"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "date",
+        "entryType",
+        "mealSlot",
+        "title",
+        "calories",
+        "proteinGrams",
+        "carbsGrams",
+        "fatsGrams",
+        "durationMinutes",
+        "intensity",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "WorkoutPlan": {
+      "title": "WorkoutPlan",
+      "description": "AI-generated personalized workout plan with trackable exercise items.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "goal": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "fitnessLevel": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "advanced"]
+        },
+        "durationMinutes": {
+          "type": "number"
+        },
+        "equipment": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "exercises": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "goal",
+        "fitnessLevel",
+        "durationMinutes",
+        "equipment",
+        "rationale",
+        "exercises",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SpecialDay": {
+      "title": "SpecialDay",
+      "description": "Birthday, anniversary, or milestone with custom reminder notifications and gift ideas.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "personOrEvent": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "occasionType": {
+          "type": "string",
+          "enum": ["birthday", "anniversary", "holiday", "milestone"]
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10
+        },
+        "repeatsYearly": {
+          "type": "boolean"
+        },
+        "reminderDaysBefore": {
+          "type": "number"
+        },
+        "customReminderTime": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "budget": {
+          "type": "number"
+        },
+        "giftIdeas": {
+          "type": "array"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "personOrEvent",
+        "occasionType",
+        "date",
+        "repeatsYearly",
+        "reminderDaysBefore",
+        "customReminderTime",
+        "budget",
+        "giftIdeas",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "HabitInsight": {
+      "title": "HabitInsight",
+      "description": "Personalized AI habit suggestion generated from user performance patterns.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "patternObservation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "suggestedAction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "focusArea": {
+          "type": "string",
+          "enum": ["productivity", "nutrition", "movement", "recovery"]
+        },
+        "adopted": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "ownerId",
+        "title",
+        "patternObservation",
+        "suggestedAction",
+        "focusArea",
+        "adopted",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-only private profile document storing PII (email, displayName)."
+    },
+    "/users/{userId}/settings/{docId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "Owner-only user settings, theme, notifications, nutrition targets, and tier preview."
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/PlannerTask" },
+      "description": "Owner-only planner tasks with ordering, voice metadata, and recurrence."
+    },
+    "/users/{userId}/dietLogs/{logId}": {
+      "schema": { "$ref": "#/entities/DietActivityLog" },
+      "description": "Owner-only daily meal and physical activity logs."
+    },
+    "/users/{userId}/workoutPlans/{planId}": {
+      "schema": { "$ref": "#/entities/WorkoutPlan" },
+      "description": "Owner-only AI-generated workout plans."
+    },
+    "/users/{userId}/specialDays/{dayId}": {
+      "schema": { "$ref": "#/entities/SpecialDay" },
+      "description": "Owner-only special days and gifting ideas."
+    },
+    "/users/{userId}/habitInsights/{insightId}": {
+      "schema": { "$ref": "#/entities/HabitInsight" },
+      "description": "Owner-only AI-generated habit suggestions."
+    }
+  }
+}
